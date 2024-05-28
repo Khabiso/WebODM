@@ -1,5 +1,3 @@
-# This configuration does not include a processing node
-# Which makes for faster setup times
 version: '2.1'
 volumes:
   dbdata:
@@ -26,6 +24,7 @@ services:
       - db
       - broker
       - worker
+      - clusterodm-worker
     environment:
       - WO_PORT
       - WO_HOST
@@ -56,3 +55,19 @@ services:
       - WO_SECRET_KEY
     restart: unless-stopped
     oom_score_adj: 250
+  clusterodm-worker:
+    image: opendronemap/clusterodm
+    container_name: clusterodm-worker
+    entrypoint: /bin/bash -c "/webodm/wait-for-postgres.sh db /webodm/wait-for-it.sh -t 0 broker:6379 -- /webodm/wait-for-it.sh -t 0 webapp:8000 -- /webodm/clusterodm_worker.sh start"
+    volumes:
+      - ${WO_MEDIA_DIR}:/webodm/app/media:z
+    depends_on:
+      - db
+      - broker
+    environment:
+      - WO_BROKER
+      - WO_DEBUG
+      - WO_SECRET_KEY
+    restart: unless-stopped
+    oom_score_adj: 250
+
